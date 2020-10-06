@@ -5,6 +5,8 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 
 class Page:
+    """XPATH Constants for the page"""
+    
     FILTER_BUTTON_XPATH = "//button//span[text()='Filter']"
     APPLIED_FILTER_BUTTON_XPATH = "//button//span[contains(text(), 'Filter ( ')]"
     CLEAR_FILTER_BUTTON_XPATH = "//nav[contains(@class, 'outside')]//button/span[contains(text(), 'Clear filters')]"
@@ -36,11 +38,22 @@ class Page:
     def get_filter_selected(self, driver, key, value):
         if key in self.LIST_ITEM_FILTERS:
             filter_xpath = self.FILTER_LIST_OPTIONS_XPATH % (value)
-            self.click_action_button(driver, filter_xpath)
+            self.click_list_option_button(driver, filter_xpath)
         else:
             filter_xpath = self.FILTER_INPUT_XPATH % (key.lower(), value.replace(" ", "").replace(".", "").replace("$", "").lower())
             self.check_or_uncheck_box(driver, filter_xpath)
 
+    def click_list_option_button(self, driver, item_xpath):
+        wait = WebDriverWait(driver, 10)
+        print("Clicking on %s" % item_xpath)
+        try:
+            list_option_element = wait.until(EC.element_to_be_clickable((By.XPATH, item_xpath)))
+            driver.implicitly_wait(10)
+            driver.execute_script("arguments[0].click()", list_option_element)
+#            ActionChains(driver).click(button_element).perform()
+        except TimeoutException:
+            print("Loading took too much time!")
+            
     def get_shop_now_button_xpath(self, menu, gender, item, is_aldo_url, filter_by):
         if menu.replace(" ", "-").lower() in ('new-arrivals', 'sale') and is_aldo_url:
             shop_button_xpath = self.SHOP_NOW_BUTTON_XPATH % (gender.lower())

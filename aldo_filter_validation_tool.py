@@ -1,6 +1,11 @@
+'''
+	Created by Leema Rose.
+	This mini test automates to validate applied filters on product list page
+'''
 import pytest
-from read_excel import excelToDict
+from read_excel import excel_to_dict
 
+'''To inspect a test function and to generate tests according to test configuration or values specified in the class or module where a test function is defined.'''
 def pytest_generate_tests(metafunc):
     argvalues = []
     for data in metafunc.cls.data:
@@ -12,35 +17,34 @@ def pytest_generate_tests(metafunc):
 
 @pytest.mark.usefixtures("driver_get")
 class TestFiltering:
-    data = excelToDict("C:\\Users\\hari4\\python-webui-filter\\Aldo-Test-Data1.xlsx")
+    TEST_DATA_FILE = "C:\\Users\\hari4\\python-webui-filter\\Aldo-Test-Data-set.xlsx"
+    CALL_IT_SPRING_TITLE = "Call It Spring Canada | Vegan Shoes, Boots, Sandals & Handbags"
+    ALDO_TITLE = "ALDO Canada | ALDO Shoes, Boots, Sandals, Handbags and Accessories"
+    data = excel_to_dict(TEST_DATA_FILE)
     
+    '''To test the url gets loaded successfully'''
     def test_load_url(self, testcase_id, url, is_aldo_url, filter_by, perform, menu, gender, category, item, size, colour, price, expected_filter_count):
         self.driver.get(url)
-        print("running load url test ")
-        assert self.driver.title == "ALDO Canada | ALDO Shoes, Boots, Sandals, Handbags and Accessories" if is_aldo_url else " Call It Spring Canada | Vegan Shoes, Boots, Sandals & Handbags"
-
+        assert self.driver.title == self.ALDO_TITLE if is_aldo_url else self.CALL_IT_SPRING_TITLE
+    
+    '''To navigate to the menu items and ensures filter button is available'''
     def test_move_to_product_list_page_from_menu(self, testcase_id, url, is_aldo_url, filter_by, perform, menu, gender, category, item, size, colour, price, expected_filter_count):
-        print("running for finding filter")    
-        if filter_by.lower() == 'menu':
-            if perform.lower() == 'click':
-                print("Inside Menu Click function")
+        if filter_by.lower() == "menu":
+            if perform.lower() == "click":
                 self.page.click_action_button(self.driver, self.page.get_menu_xpath(menu))
                 self.page.click_action_button(self.driver, self.page.get_shop_now_button_xpath(menu, gender, item, is_aldo_url))
             else:
-                print("Inside Menu Hover function")
                 self.page.hover_on_menu_element(self.driver, menu, category, item)
         if filter_by.lower() == 'button':
-            print("Inside Button Click function")
             self.page.click_action_button(self.driver, self.page.get_shop_now_button_xpath(menu, gender, item, is_aldo_url, filter_by))
         
         filter_text = self.page.get_xpath_element(self.driver, self.page.FILTER_BUTTON_XPATH).text
         
         assert filter_text == 'Filter'
     
+    '''To test if all the filter combinations applied'''
     def test_apply_filters(self, testcase_id, url, is_aldo_url, filter_by, perform, menu, gender, category, item, size, colour, price, expected_filter_count):
-        print("running for applying filter")
         self.page.click_dropdown_filter(self.driver, self.page.FILTER_BUTTON_XPATH)
-        print(testcase_id, url, is_aldo_url, filter_by, perform, menu, gender, category, item, size, colour, price, expected_filter_count)
         if filter_by.lower() == "menu" and perform.lower() == "click" and "men" not in menu.lower():
             filter_dict = {'Category': category, 'Size': size, 'Colour': colour, 'Price': price}
         elif filter_by.lower() == "button": 
@@ -57,6 +61,5 @@ class TestFiltering:
         self.page.click_action_button(self.driver, self.page.get_apply_filter_xpath(is_aldo_url))
         
         actual_filter_count = self.page.get_applied_filter_count(self.driver, is_aldo_url)
-        print("filter_count value is : %s" % actual_filter_count)
         
         assert expected_filter_count == actual_filter_count   

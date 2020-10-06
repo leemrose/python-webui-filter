@@ -17,7 +17,9 @@ Test framework: Pytest
 Add any dependencies required in the project
 
 Required Installations:
+=======================
 
+********To install selenium for webdriver ui test********
 python -m pip install selenium
 
 download chromedriver from here based on your system's configuration
@@ -25,6 +27,24 @@ https://sites.google.com/a/chromium.org/chromedriver/
 
 refer the driver path in your script to load url on the browser.
 
+********To install pytest********
 pip install -U pytest
 
-using panda read excel to get excel input for our test input.
+********To read excel input data install openpxl********
+pip install openpyxl
+
+********To view report in html format********
+pip install pytest-html 
+
+Command to run the test:
+C:\Users\<user>\python-webui-filter> pytest .\aldo_filter_validation_tool.py
+
+Command to run the test in debug mode:
+pytest -v .\aldo_filter_validation_tool.py
+
+Comment to run test and get the html report:
+pytest .\aldo_filter_validation_tool.py --html="./ALDO-FILTER-VALIDATION-TEST-REPORT.html"
+
+Sample test input Format in excel:
+
+Screenshot of test result:
