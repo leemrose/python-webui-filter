@@ -14,14 +14,3 @@ def driver_get(request):
         setattr(cls.obj,"page",page)
     yield
     web_driver.close()
-    
-@pytest.fixture(scope="class")
-def driver_init(request):
-    from selenium import webdriver
-    from page import Page
-    web_driver = webdriver.Chrome(r"C:\Users\hari4\aldo-webui-python-selenium\chromedriver")
-    request.cls.driver = web_driver
-    request.cls.page = Page()
-    yield
-    web_driver.close()
-    
