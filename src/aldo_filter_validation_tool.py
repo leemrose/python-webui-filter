@@ -4,6 +4,9 @@
 '''
 import pytest
 from read_excel import excel_to_dict
+from config import TEST_DATA_FILE
+from config import CALL_IT_SPRING_TITLE
+from config import ALDO_TITLE
 
 '''To inspect a test function and to generate tests according to test configuration or values specified in the class or module where a test function is defined.'''
 def pytest_generate_tests(metafunc):
@@ -17,15 +20,12 @@ def pytest_generate_tests(metafunc):
 
 @pytest.mark.usefixtures("driver_get")
 class TestFiltering:
-    TEST_DATA_FILE = "C:\\Users\\hari4\\python-webui-filter\\input\\Aldo-Test-Data-set.xlsx"
-    CALL_IT_SPRING_TITLE = "Call It Spring Canada | Vegan Shoes, Boots, Sandals & Handbags"
-    ALDO_TITLE = "ALDO Canada | ALDO Shoes, Boots, Sandals, Handbags and Accessories"
     data = excel_to_dict(TEST_DATA_FILE)
     
     '''To test the url gets loaded successfully'''
     def test_load_url(self, testcase_id, url, is_aldo_url, filter_by, perform, menu, gender, category, item, size, colour, price, expected_filter_count):
         self.driver.get(url)
-        assert self.driver.title == self.ALDO_TITLE if is_aldo_url else self.CALL_IT_SPRING_TITLE
+        assert self.driver.title == ALDO_TITLE if is_aldo_url else CALL_IT_SPRING_TITLE
     
     '''To navigate to the menu items and ensures filter button is available'''
     def test_move_to_product_list_page_from_menu(self, testcase_id, url, is_aldo_url, filter_by, perform, menu, gender, category, item, size, colour, price, expected_filter_count):

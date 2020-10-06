@@ -5,8 +5,8 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 
 class Page:
-    """XPATH Constants for the page"""
     
+    '''XPATH Constants for the page elements'''
     FILTER_BUTTON_XPATH = "//button//span[text()='Filter']"
     APPLIED_FILTER_BUTTON_XPATH = "//button//span[contains(text(), 'Filter ( ')]"
     CLEAR_FILTER_BUTTON_XPATH = "//nav[contains(@class, 'outside')]//button/span[contains(text(), 'Clear filters')]"
@@ -50,7 +50,6 @@ class Page:
             list_option_element = wait.until(EC.element_to_be_clickable((By.XPATH, item_xpath)))
             driver.implicitly_wait(10)
             driver.execute_script("arguments[0].click()", list_option_element)
-#            ActionChains(driver).click(button_element).perform()
         except TimeoutException:
             print("Loading took too much time!")
             
@@ -80,7 +79,6 @@ class Page:
         print("Clicking on %s" % item_xpath)
         try:
             button_element = wait.until(EC.element_to_be_clickable((By.XPATH, item_xpath)))
-#            self.scroll_element_into_view(driver, button_element)
             driver.execute_script("arguments[0].click()", button_element)
         except TimeoutException:
             print("Loading took too much time!")
