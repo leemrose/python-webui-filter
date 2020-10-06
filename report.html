@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (extras.classList.contains("collapsed")) {
+            expandcollapse.classList.add("expander")
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    sort_column(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+
+        if (key_a == key_b) return 0;
+
+        if (reversed) {
+            return (key_a < key_b ? 1 : -1);
+        } else {
+            return (key_a > key_b ? 1 : -1);
+        }
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 05-Oct-2020 at 19:41:01 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v2.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.9.0", "pytest": "6.0.1"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.18362-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"arraydiff": "0.3", "doctestplus": "0.4.0", "html": "2.1.1", "metadata": "1.10.0", "openfiles": "0.4.0", "remotedata": "0.3.2"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.7.4</td></tr></table>
+    <h2>Summary</h2>
+    <p>12 tests ran in 48.38 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">10 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">2 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable numeric" col="duration">Duration</th>
+          <th>Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_apply_filters[FilterbyButton-https://www.aldoshoes.com-True-Button-click-not applicable-Women-Footwear-Ankle boots-5-Black-None-3]</td>
+          <td class="col-duration">3.31</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;aldo_filter_validation_tool.TestFiltering object at 0x000002306BD26288&gt;, testcase_id = &#x27;FilterbyButton&#x27;, url = &#x27;https://www.aldoshoes.com&#x27;, is_aldo_url = True, filter_by = &#x27;Button&#x27;, perform = &#x27;click&#x27;, menu = &#x27;not applicable&#x27;<br/>gender = &#x27;Women&#x27;, category = &#x27;Footwear&#x27;, item = &#x27;Ankle boots&#x27;, size = &#x27;5&#x27;, colour = &#x27;Black&#x27;, price = None, expected_filter_count = 3<br/><br/>    def test_apply_filters(self, testcase_id, url, is_aldo_url, filter_by, perform, menu, gender, category, item, size, colour, price, expected_filter_count):<br/>        self.page.click_dropdown_filter(self.driver, self.page.FILTER_BUTTON_XPATH)<br/>        if filter_by.lower() == &quot;menu&quot; and perform.lower() == &quot;click&quot; and &quot;men&quot; not in menu.lower():<br/>            filter_dict = {&#x27;Category&#x27;: category, &#x27;Size&#x27;: size, &#x27;Colour&#x27;: colour, &#x27;Price&#x27;: price}<br/>        elif filter_by.lower() == &quot;button&quot;:<br/>            filter_dict = {&#x27;Category&#x27;: item, &#x27;Size&#x27;: size, &#x27;Colour&#x27;: colour, &#x27;Price&#x27;: price}<br/>        else:<br/>            filter_dict = {&#x27;Size&#x27;: size, &#x27;Colour&#x27;: colour, &#x27;Price&#x27;: price}<br/>    <br/>        for key, value in filter_dict.items():<br/>            if key.capitalize() in filter_dict and value is not None:<br/>                print(&quot;key: %s and value: : %s&quot; % (key, value))<br/>                self.page.get_filter_selected(self.driver, key.capitalize(), value)<br/>    <br/>        self.driver.implicitly_wait(10)<br/>        self.page.click_action_button(self.driver, self.page.get_apply_filter_xpath(is_aldo_url))<br/>    <br/>        actual_filter_count = self.page.get_applied_filter_count(self.driver, is_aldo_url)<br/>    <br/>&gt;       assert expected_filter_count == actual_filter_count<br/><span class="error">E       assert 3 == 2</span><br/><br/>aldo_filter_validation_tool.py:65: AssertionError<br/> ------------------------------Captured stdout call------------------------------ <br/>Clicking on //button//span[text()=&#x27;Filter&#x27;]
+key: Category and value: : Ankle boots
+Clicking on //input[@class=&#x27;c-form-field-checkbox c-form-field-checkbox--has-mobile-list-display&#x27;][@id=&#x27;category-ankleboots&#x27;]
+key: Size and value: : 5
+Clicking on .//div[contains(@class, &#x27;c-filter-group__body&#x27;)]//ul/li//span[text()=&#x27;5&#x27;]
+key: Colour and value: : Black
+Clicking on .//div[contains(@class, &#x27;c-filter-group__body&#x27;)]//ul/li//span[text()=&#x27;Black&#x27;]
+Clicking on //nav[contains(@class, &#x27;outside&#x27;)]//button/span[contains(text(), &#x27;Apply&#x27;)]
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_apply_filters[FilterbyMenuHoverCallitSpring-https://www.callitspring.com/ca/en-False-Menu-Hover-Men-Men-Footwear-Boots-7-Blue-$80 - $99.99-3]</td>
+          <td class="col-duration">11.66</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;aldo_filter_validation_tool.TestFiltering object at 0x000002306C0698C8&gt;, testcase_id = &#x27;FilterbyMenuHoverCallitSpring&#x27;, url = &#x27;https://www.callitspring.com/ca/en&#x27;, is_aldo_url = False, filter_by = &#x27;Menu&#x27;, perform = &#x27;Hover&#x27;<br/>menu = &#x27;Men&#x27;, gender = &#x27;Men&#x27;, category = &#x27;Footwear&#x27;, item = &#x27;Boots&#x27;, size = &#x27;7&#x27;, colour = &#x27;Blue&#x27;, price = &#x27;$80 - $99.99&#x27;, expected_filter_count = 3<br/><br/>    def test_apply_filters(self, testcase_id, url, is_aldo_url, filter_by, perform, menu, gender, category, item, size, colour, price, expected_filter_count):<br/>        self.page.click_dropdown_filter(self.driver, self.page.FILTER_BUTTON_XPATH)<br/>        if filter_by.lower() == &quot;menu&quot; and perform.lower() == &quot;click&quot; and &quot;men&quot; not in menu.lower():<br/>            filter_dict = {&#x27;Category&#x27;: category, &#x27;Size&#x27;: size, &#x27;Colour&#x27;: colour, &#x27;Price&#x27;: price}<br/>        elif filter_by.lower() == &quot;button&quot;:<br/>            filter_dict = {&#x27;Category&#x27;: item, &#x27;Size&#x27;: size, &#x27;Colour&#x27;: colour, &#x27;Price&#x27;: price}<br/>        else:<br/>            filter_dict = {&#x27;Size&#x27;: size, &#x27;Colour&#x27;: colour, &#x27;Price&#x27;: price}<br/>    <br/>        for key, value in filter_dict.items():<br/>            if key.capitalize() in filter_dict and value is not None:<br/>                print(&quot;key: %s and value: : %s&quot; % (key, value))<br/>                self.page.get_filter_selected(self.driver, key.capitalize(), value)<br/>    <br/>        self.driver.implicitly_wait(10)<br/>        self.page.click_action_button(self.driver, self.page.get_apply_filter_xpath(is_aldo_url))<br/>    <br/>&gt;       actual_filter_count = self.page.get_applied_filter_count(self.driver, is_aldo_url)<br/><br/>aldo_filter_validation_tool.py:63: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>page.py:114: in get_applied_filter_count<br/>    return int((self.get_xpath_element(driver, self.APPLIED_FILTER_BUTTON_XPATH).text).split(&quot; &quot;)[2])<br/>page.py:102: in get_xpath_element<br/>    web_element = wait.until(EC.presence_of_element_located((By.XPATH, item_xpath)))<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;selenium.webdriver.support.wait.WebDriverWait (session=&quot;ca908f583c8f6e77b0dce389db168b14&quot;)&gt;, method = &lt;selenium.webdriver.support.expected_conditions.presence_of_element_located object at 0x000002306C062348&gt;, message = &#x27;&#x27;<br/><br/>    def until(self, method, message=&#x27;&#x27;):<br/>        &quot;&quot;&quot;Calls the method provided with the driver as an argument until the \<br/>        return value is not False.&quot;&quot;&quot;<br/>        screen = None<br/>        stacktrace = None<br/>    <br/>        end_time = time.time() + self._timeout<br/>        while True:<br/>            try:<br/>                value = method(self._driver)<br/>                if value:<br/>                    return value<br/>            except self._ignored_exceptions as exc:<br/>                screen = getattr(exc, &#x27;screen&#x27;, None)<br/>                stacktrace = getattr(exc, &#x27;stacktrace&#x27;, None)<br/>            time.sleep(self._poll)<br/>            if time.time() &gt; end_time:<br/>                break<br/>&gt;       raise TimeoutException(message, screen, stacktrace)<br/><span class="error">E       selenium.common.exceptions.TimeoutException: Message:</span><br/><br/>..\anaconda3\lib\site-packages\selenium\webdriver\support\wait.py:80: TimeoutException<br/> ------------------------------Captured stdout call------------------------------ <br/>Clicking on //button//span[text()=&#x27;Filter&#x27;]
+key: Size and value: : 7
+Clicking on .//div[contains(@class, &#x27;c-filter-group__body&#x27;)]//ul/li//span[text()=&#x27;7&#x27;]
+key: Colour and value: : Blue
+Clicking on .//div[contains(@class, &#x27;c-filter-group__body&#x27;)]//ul/li//span[text()=&#x27;Blue&#x27;]
+key: Price and value: : $80 - $99.99
+Clicking on //input[@class=&#x27;c-form-field-checkbox c-form-field-checkbox--has-mobile-list-display&#x27;][@id=&#x27;price-80-9999&#x27;]
+Clicking on //nav[contains(@class, &#x27;desktop&#x27;)]//button/span[contains(text(), &#x27;Apply&#x27;)]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_load_url[FilterbyMenuHover-https://www.aldoshoes.com-True-Menu-Hover-Women-Women-Handbags-Tote bags-None-Beige-None-1]</td>
+          <td class="col-duration">3.77</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_move_to_product_list_page_from_menu[FilterbyMenuHover-https://www.aldoshoes.com-True-Menu-Hover-Women-Women-Handbags-Tote bags-None-Beige-None-1]</td>
+          <td class="col-duration">2.20</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>menu xpath : //button[@id=&#x27;regular-menu-caenwomen&#x27;]//span[@class=&#x27;u-btn__content&#x27;]/span[text()=&#x27;Women&#x27;]
+item from submenu xpath : //div[@aria-labelledby=&#x27;regular-menu-caenwomen&#x27;]//a[@class=&#x27;c-navigation__link&#x27;][text()=&#x27;Tote bags&#x27;]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_apply_filters[FilterbyMenuHover-https://www.aldoshoes.com-True-Menu-Hover-Women-Women-Handbags-Tote bags-None-Beige-None-1]</td>
+          <td class="col-duration">2.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Clicking on //button//span[text()=&#x27;Filter&#x27;]
+key: Colour and value: : Beige
+Clicking on .//div[contains(@class, &#x27;c-filter-group__body&#x27;)]//ul/li//span[text()=&#x27;Beige&#x27;]
+Clicking on //nav[contains(@class, &#x27;outside&#x27;)]//button/span[contains(text(), &#x27;Apply&#x27;)]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_load_url[FilterbyButton-https://www.aldoshoes.com-True-Button-click-not applicable-Women-Footwear-Ankle boots-5-Black-None-3]</td>
+          <td class="col-duration">2.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_move_to_product_list_page_from_menu[FilterbyButton-https://www.aldoshoes.com-True-Button-click-not applicable-Women-Footwear-Ankle boots-5-Black-None-3]</td>
+          <td class="col-duration">0.96</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Clicking on //a[text()=&#x27;Shop women&#x27;]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_load_url[FilterbyMenuHoverCallitSpring-https://www.callitspring.com/ca/en-False-Menu-Hover-Men-Men-Footwear-Boots-7-Blue-$80 - $99.99-3]</td>
+          <td class="col-duration">3.42</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_move_to_product_list_page_from_menu[FilterbyMenuHoverCallitSpring-https://www.callitspring.com/ca/en-False-Menu-Hover-Men-Men-Footwear-Boots-7-Blue-$80 - $99.99-3]</td>
+          <td class="col-duration">1.98</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>menu xpath : //button[@id=&#x27;regular-menu-caenmen&#x27;]//span[@class=&#x27;u-btn__content&#x27;]/span[text()=&#x27;Men&#x27;]
+item from submenu xpath : //div[@aria-labelledby=&#x27;regular-menu-caenmen&#x27;]//a[@class=&#x27;c-navigation__link&#x27;][text()=&#x27;Boots&#x27;]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_load_url[FilterbyMenuHoverAldo-https://www.aldoshoes.com-True-Menu-Hover-Men-Men-Bags &amp; accessories-Belts-S-Black-None-1]</td>
+          <td class="col-duration">3.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_move_to_product_list_page_from_menu[FilterbyMenuHoverAldo-https://www.aldoshoes.com-True-Menu-Hover-Men-Men-Bags &amp; accessories-Belts-S-Black-None-1]</td>
+          <td class="col-duration">4.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>menu xpath : //button[@id=&#x27;regular-menu-caenmen&#x27;]//span[@class=&#x27;u-btn__content&#x27;]/span[text()=&#x27;Men&#x27;]
+item from submenu xpath : //div[@aria-labelledby=&#x27;regular-menu-caenmen&#x27;]//a[@class=&#x27;c-navigation__link&#x27;][text()=&#x27;Belts&#x27;]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">aldo_filter_validation_tool.py::TestFiltering::test_apply_filters[FilterbyMenuHoverAldo-https://www.aldoshoes.com-True-Menu-Hover-Men-Men-Bags &amp; accessories-Belts-S-Black-None-1]</td>
+          <td class="col-duration">2.34</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Clicking on //button//span[text()=&#x27;Filter&#x27;]
+key: Size and value: : S
+Clicking on .//div[contains(@class, &#x27;c-filter-group__body&#x27;)]//ul/li//span[text()=&#x27;S&#x27;]
+key: Colour and value: : Black
+Clicking on .//div[contains(@class, &#x27;c-filter-group__body&#x27;)]//ul/li//span[text()=&#x27;Black&#x27;]
+Clicking on //nav[contains(@class, &#x27;outside&#x27;)]//button/span[contains(text(), &#x27;Apply&#x27;)]
+<br/></div></td></tr></tbody></table></body></html>
