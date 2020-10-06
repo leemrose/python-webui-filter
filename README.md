@@ -45,6 +45,11 @@ pytest -v .\aldo_filter_validation_tool.py
 Comment to run test and get the html report:
 pytest .\aldo_filter_validation_tool.py --html="./ALDO-FILTER-VALIDATION-TEST-REPORT.html"
 
-Sample test input Format in excel:
+Screen shot of command run results on console:
+https://github.com/leemrose/python-webui-filter/blob/main/Aldo-filter-run-result-screen-shot.JPG
 
-Screenshot of test result:
+Sample test input Format in excel:
+https://github.com/leemrose/python-webui-filter/blob/main/screen-shot-for-test-data-set-in-excel.JPG
+
+HTLM REPORT for the test run : https://github.com/leemrose/python-webui-filter/blob/main/ALDO-FILTER-VALIDATION-TEST-REPORT.html
+
